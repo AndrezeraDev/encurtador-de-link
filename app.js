@@ -1,94 +1,112 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const mysql = require('mysql');
-const fetch = require('node-fetch'); // Importe node-fetch para fazer requisições HTTP
-const { nanoid } = require('nanoid');
+import express from 'express';
+import bodyParser from 'body-parser';
+import mysql from 'mysql2/promise';
+import { nanoid } from 'nanoid';
+import cors from 'cors';
 
 const app = express();
-const port = 3000;
+const port = 3001;
+const baseUrl = 'http://localhost:3001';
 
-// Configuração do MySQL
-const db = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: 'VendaSeguro001',
-    database: 'url_shortener'
-});
-
-// Conectar ao MySQL
-db.connect((err) => {
-    if (err) {
-        throw err;
+// Conexão com o banco de dados
+async function initializeDatabase() {
+    try {
+        const db = await mysql.createConnection({
+            host: 'localhost',
+            user: 'root',
+            password: 'Vendaseguro001',
+            database: 'url_shortener'
+        });
+        console.log('Banco de dados conectado com sucesso');
+        return db;
+    } catch (err) {
+        console.error('Erro ao conectar ao banco de dados:', err);
+        process.exit(1); // Encerra o processo se não conseguir conectar ao banco de dados
     }
-    console.log('Conexão ao MySQL estabelecida');
-});
+}
+
+const db = await initializeDatabase();
 
 // Middleware para análise de corpo de solicitação JSON
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors());
+
+// Servir arquivos estáticos do diretório 'public'
+app.use(express.static('public'));
 
 // Endpoint para encurtar a URL
 app.post('/shorten', async (req, res) => {
     const longUrl = req.body.url;
-    const shortId = nanoid(8); // Gera um ID curto de 8 caracteres
+    const shortId = nanoid(3);
 
     try {
-        // Chamar a API do Short.io para criar um link curto
-        const response = await fetch('https://api.short.io/links', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': 'Bearer sk_hNBMrG79KttiSXzk' // Substitua com seu API key do Short.io
-            },
-            body: JSON.stringify({
-                originalURL: longUrl
-            })
-        });
-
-        // Verifique o objeto de resposta da API do Short.io
-        console.log(response);
-
-        if (!response.ok) {
-            throw new Error('Erro ao encurtar a URL com o Short.io');
-        }
-
-        const data = await response.json();
-
-        // Salvar no banco de dados
         const sql = 'INSERT INTO urls (long_url, short_id) VALUES (?, ?)';
-        db.query(sql, [longUrl, data.shortURL], (err, result) => {
-            if (err) {
-                console.error(err);
-                return res.status(500).send('Erro ao encurtar a URL');
-            }
+        const [result] = await db.query(sql, [longUrl, shortId]);
 
-            res.json({ shortUrl: data.shortURL });
-        });
+        const shortUrl = `${baseUrl}/${shortId}`;
+        res.json({ shortUrl });
     } catch (err) {
-        console.error(err);
-        return res.status(500).send('Erro ao encurtar a URL com o Short.io');
+        console.error('Erro ao encurtar a URL:', err);
+        return res.status(500).send('Erro ao encurtar a URL');
     }
 });
 
 // Endpoint para redirecionar para URL original
-app.get('/:shortId', (req, res) => {
+app.get('/:shortId', async (req, res) => {
     const shortId = req.params.shortId;
+    const userAgent = req.headers['user-agent'];
 
-    // Buscar a URL original no banco de dados
-    const sql = 'SELECT long_url FROM urls WHERE short_id = ?';
-    db.query(sql, [shortId], (err, result) => {
-        if (err) {
-            console.error(err);
-            return res.status(500).send('Erro ao buscar a URL');
-        }
+    try {
+        const sqlSelect = 'SELECT long_url FROM urls WHERE short_id = ?';
+        const [result] = await db.query(sqlSelect, [shortId]);
 
         if (result.length > 0) {
             const longUrl = result[0].long_url;
+
+            const sqlInsertClick = 'INSERT INTO clicks (short_id, user_agent) VALUES (?, ?)';
+            await db.query(sqlInsertClick, [shortId, userAgent]);
+
             res.redirect(longUrl);
         } else {
             res.status(404).send('URL não encontrada');
         }
-    });
+    } catch (err) {
+        console.error('Erro ao redirecionar:', err);
+        res.status(500).send('Erro ao redirecionar');
+    }
+});
+
+// Endpoint para obter histórico de URLs encurtadas
+app.get('/history', async (req, res) => {
+    try {
+        const sql = 'SELECT * FROM urls';
+        const [results] = await db.query(sql);
+        res.json(results);
+    } catch (err) {
+        console.error('Erro ao buscar histórico de URLs:', err);
+        res.status(500).send('Erro ao buscar histórico de URLs');
+    }
+});
+
+app.get('/stats', async (req, res) => {
+    console.log('Endpoint /stats acessado');  // Log para depuração
+    try {
+        const sql = `
+            SELECT 
+                urls.short_id,
+                urls.long_url,
+                COUNT(clicks.id) AS click_count
+            FROM urls
+            LEFT JOIN clicks ON urls.short_id = clicks.short_id
+            GROUP BY urls.short_id, urls.long_url
+        `;
+        const [results] = await db.query(sql);
+        res.json(results);
+    } catch (err) {
+        console.error('Erro ao buscar estatísticas de cliques:', err);
+        res.status(500).send('Erro ao buscar estatísticas de cliques');
+    }
 });
 
 // Iniciar o servidor

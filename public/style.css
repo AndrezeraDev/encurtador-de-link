@@ -1,0 +1,120 @@
+*{
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: "Poppins", sans-serif;
+}
+body{
+    background-color: #323153;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-top: 8rem;
+}
+.container{
+    display: flex;
+    flex-direction: column;
+    padding: 40px;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 60vw;
+}
+
+label{
+    font-size: 2rem;
+    padding:5px;
+    color: white;
+}
+
+#url{
+    margin-top: 12px;
+    margin-bottom: 12px;
+    padding: 10px;
+    border-radius: 30px;
+    border: none;
+    width: 60%;
+}
+
+#customText {
+    padding: 8px;
+    border-radius: 16px;
+    border: none;
+    text-align: center;
+    margin-bottom: 12px;
+}
+
+#url::placeholder{
+    text-align: center;
+    font-size: 14px;
+}
+button{
+    padding: 10px;
+    width: 30%;
+    border-radius: 50px;
+    border: none;
+    background-color: #d96015;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #f0b28c;
+    transition: 0.4s ease-in-out;
+}
+
+#result, #stats-result {
+    padding-top: 3rem;
+    display: block;
+    flex-direction: column;
+    color: white;
+}
+p{
+    color: whitesmoke;
+}
+
+/*-------------Media---querie----------------------*/
+
+@media screen and (max-width: 500px) {
+    label{
+        font-size: 1rem;
+    }
+    #url{
+        width: 100%;
+    }
+    button{
+        width: 60%;
+    }
+}
+
+@media screen and (max-width: 370px) {
+    label{
+        font-size: 1rem;
+    }
+    #url{
+        width: 100%;
+    }
+    button{
+        width: 60%;
+    }
+}
+
+/* Adiciona estilo para a tabela de dados dos cliques */
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f4f4f4;
+}
