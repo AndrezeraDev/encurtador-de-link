@@ -12,10 +12,10 @@ const baseUrl = 'http://localhost:3001';
 async function initializeDatabase() {
     try {
         const db = await mysql.createConnection({
-            host: 'localhost',
-            user: 'root',
-            password: 'Vendaseguro001',
-            database: 'url_shortener'
+            host: 'localhost',  // Ou o hostname do banco de dados no cPanel
+            user: 'vend3021_url_shortener',  // Atualize com o nome do usuário do banco de dados
+            password: 'Vendaseguro001',  // Atualize com a senha do banco de dados
+            database: 'url_shortener'  // Atualize com o nome do banco de dados
         });
         console.log('Banco de dados conectado com sucesso');
         return db;
